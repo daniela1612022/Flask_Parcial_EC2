@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy Backend Flask
 
 on:
   push:
@@ -6,26 +6,29 @@ on:
 
 jobs:
   Deploy:
-    name: Deploy to EC2
+    name: Deploy to EC2 for Backend Flask
     runs-on: ubuntu-latest
     
     steps:
+      # Paso 1: Chequear el código del repositorio
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Paso 2: Configurar Python
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.x'
 
+      # Paso 3: Desplegar en la instancia EC2
       - name: Deploy to EC2 Instance
         env:
-          EC2_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_IP: ${{ secrets.SSH_HOST }}
-          EC2_USER: ${{ secrets.USER_NAME }}
-          APP_DIR: /home/ubuntu/Flask_S3_AWS
-          APP_FILE: app.py
-          ENVIRONMENT: production
+          EC2_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  # Clave SSH privada almacenada en GitHub Secrets
+          SERVER_IP: ${{ secrets.SSH_HOST }}                # IP pública de tu instancia EC2
+          EC2_USER: ${{ secrets.USER_NAME }}                # Usuario EC2 (ej. ubuntu)
+          APP_DIR: /home/ubuntu/mi_proyecto_flask           # Ruta de tu backend Flask en EC2
+          APP_FILE: app.py                                  # Archivo principal de tu aplicación
+          ENVIRONMENT: production                           # Configuración del entorno (opcional)
       
         run: |
           # Guardar la clave privada en un archivo temporal
@@ -36,12 +39,12 @@ jobs:
               # Acceder al directorio del proyecto
               cd $APP_DIR &&
               
-              # Activar el entorno virtual
-              if [ -d "env" ]; then
-                  source env/bin/activate
+              # Verificar si el entorno virtual existe, de lo contrario crearlo
+              if [ -d "venv" ]; then
+                  source venv/bin/activate
               else
-                  python3 -m venv env
-                  source env/bin/activate
+                  python3 -m venv venv
+                  source venv/bin/activate
               fi &&
 
               # Actualizar el código desde la rama main
@@ -52,7 +55,7 @@ jobs:
               # Instalar dependencias necesarias
               pip install -r requirements.txt &&
 
-              # Detener cualquier proceso que esté usando el puerto 5000 (sin sudo)
+              # Detener cualquier proceso en el puerto 5000
               lsof -t -i:5000 | xargs kill -9 || true &&
 
               # Ejecutar la aplicación Flask en segundo plano
