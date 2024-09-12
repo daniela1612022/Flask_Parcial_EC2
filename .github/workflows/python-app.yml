@@ -20,22 +20,25 @@ jobs:
         with:
           python-version: '3.x'
 
-      # Paso 3: Desplegar en la instancia EC2
-      - name: Deploy to EC2 Instance
-        env:
-          EC2_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  # Clave SSH privada en GitHub Secrets
-          SERVER_IP: ${{ secrets.SSH_HOST }}                # IP pública de tu instancia EC2
-          EC2_USER: ${{ secrets.USER_NAME }}                # Usuario EC2 (ej. ubuntu)
-          APP_DIR: /home/ubuntu/mi_proyecto_flask           # Ruta de tu backend Flask en EC2
-      
+      # Paso 3: Crear archivo de clave privada
+      - name: Create SSH Key
         run: |
-          # Guardar la clave privada en un archivo temporal
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ec2_key && chmod 400 ec2_key
-          
-          # Ejecutar SSH para conectarse a la instancia EC2
-          ssh -o StrictHostKeyChecking=no -i ec2_key "${{ secrets.USER_NAME }}@${{ secrets.SSH_HOST }}" << 'EOF'
-            set -e  # Asegurarse de que se detenga en caso de error
-            echo 'Conexión exitosa a EC2'
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ec2_key
+          chmod 400 ec2_key
+          echo "Clave SSH creada:"
+          ls -l ec2_key
+
+      # Paso 4: Probar conexión SSH (arreglando variables de entorno)
+      - name: Test SSH Connection
+        run: |
+          ssh -v -o StrictHostKeyChecking=no -i ec2_key ${{ secrets.USER_NAME }}@${{ secrets.SSH_HOST }} echo "Conexión SSH exitosa"
+
+      # Paso 5: Desplegar en la instancia EC2
+      - name: Deploy to EC2 Instance
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ec2_key ${{ secrets.USER_NAME }}@${{ secrets.SSH_HOST }} << 'EOF'
+            set -e
+            echo 'Conexión SSH exitosa a la instancia EC2'
 
             # Acceder al directorio del proyecto
             cd /home/ubuntu/mi_proyecto_flask || { echo 'Directorio no encontrado'; exit 1; }
