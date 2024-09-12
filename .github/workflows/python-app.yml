@@ -28,45 +28,7 @@ jobs:
           echo "Clave SSH creada:"
           ls -l ec2_key
 
-      # Paso 4: Probar conexión SSH (arreglando variables de entorno)
+      # Paso 4: Probar conexión SSH con valores directos
       - name: Test SSH Connection
         run: |
-          ssh -v -o StrictHostKeyChecking=no -i ec2_key ${{ secrets.USER_NAME }}@${{ secrets.SSH_HOST }} echo "Conexión SSH exitosa"
-
-      # Paso 5: Desplegar en la instancia EC2
-      - name: Deploy to EC2 Instance
-        run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_key ${{ secrets.USER_NAME }}@${{ secrets.SSH_HOST }} << 'EOF'
-            set -e
-            echo 'Conexión SSH exitosa a la instancia EC2'
-
-            # Acceder al directorio del proyecto
-            cd /home/ubuntu/mi_proyecto_flask || { echo 'Directorio no encontrado'; exit 1; }
-
-            # Verificar si el entorno virtual existe, de lo contrario crearlo
-            if [ -d 'venv' ]; then
-                echo 'Activando entorno virtual existente'
-                source venv/bin/activate
-            else
-                echo 'Creando nuevo entorno virtual'
-                python3 -m venv venv
-                source venv/bin/activate
-            fi
-
-            # Actualizar el código desde la rama main
-            git fetch --all &&
-            git reset --hard origin/main &&
-            git pull origin main || { echo 'Error en git pull'; exit 1; }
-
-            # Instalar dependencias necesarias
-            pip install -r requirements.txt || { echo 'Error en pip install'; exit 1; }
-
-            # Detener cualquier proceso en el puerto 5000
-            lsof -t -i:5000 | xargs kill -9 || echo 'No se encontraron procesos en el puerto 5000'
-
-            # Ejecutar la aplicación Flask en segundo plano
-            nohup flask run --host=0.0.0.0 --port=5000 &
-
-            # Desactivar el entorno virtual
-            deactivate
-          EOF
+          ssh -v -o StrictHostKeyChecking=no -i ec2_key ubuntu@35.171.160.201 echo "Conexión SSH exitosa"
