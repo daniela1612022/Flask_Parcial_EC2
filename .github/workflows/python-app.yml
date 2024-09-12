@@ -30,15 +30,15 @@ jobs:
       
         run: |
           # Guardar la clave privada en un archivo temporal
-          echo "$EC2_PRIVATE_KEY" > ec2_key && chmod 400 ec2_key
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ec2_key && chmod 400 ec2_key
           
-          # Conectarse a la instancia EC2 y realizar el despliegue
-          ssh -o StrictHostKeyChecking=no -i ec2_key ${EC2_USER}@${SERVER_IP} "
+          # Ejecutar SSH para conectarse a la instancia EC2
+          ssh -o StrictHostKeyChecking=no -i ec2_key "${{ secrets.USER_NAME }}@${{ secrets.SSH_HOST }}" << 'EOF'
             set -e  # Asegurarse de que se detenga en caso de error
             echo 'Conexión exitosa a EC2'
 
             # Acceder al directorio del proyecto
-            cd $APP_DIR || { echo 'Directorio no encontrado'; exit 1; }
+            cd /home/ubuntu/mi_proyecto_flask || { echo 'Directorio no encontrado'; exit 1; }
 
             # Verificar si el entorno virtual existe, de lo contrario crearlo
             if [ -d 'venv' ]; then
@@ -66,4 +66,4 @@ jobs:
 
             # Desactivar el entorno virtual
             deactivate
-          "
+          EOF
