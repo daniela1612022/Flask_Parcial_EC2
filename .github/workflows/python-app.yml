@@ -30,7 +30,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1  # Tu región es us-east-1
+          aws-region: us-east-1  # Región de AWS
 
       - name: Add SSH Key
         uses: webfactory/ssh-agent@v0.5.3
@@ -40,7 +40,7 @@ jobs:
       # Reemplaza con la IP pública de tu instancia EC2 (35.171.160.201)
       - name: Deploy backend to EC2
         run: |
-          ssh ubuntu@35.171.160.201 << 'EOF'
+          ssh -o StrictHostKeyChecking=no ubuntu@35.171.160.201 << 'EOF'
             cd /home/ubuntu/mi_proyecto_flask
             git pull origin main
             source venv/bin/activate
