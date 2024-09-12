@@ -23,44 +23,47 @@ jobs:
       # Paso 3: Desplegar en la instancia EC2
       - name: Deploy to EC2 Instance
         env:
-          EC2_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  # Clave SSH privada almacenada en GitHub Secrets
+          EC2_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  # Clave SSH privada en GitHub Secrets
           SERVER_IP: ${{ secrets.SSH_HOST }}                # IP pública de tu instancia EC2
           EC2_USER: ${{ secrets.USER_NAME }}                # Usuario EC2 (ej. ubuntu)
           APP_DIR: /home/ubuntu/mi_proyecto_flask           # Ruta de tu backend Flask en EC2
-          APP_FILE: app.py                                  # Archivo principal de tu aplicación
-          ENVIRONMENT: production                           # Configuración del entorno (opcional)
       
         run: |
           # Guardar la clave privada en un archivo temporal
           echo "$EC2_PRIVATE_KEY" > ec2_key && chmod 400 ec2_key
           
           # Conectarse a la instancia EC2 y realizar el despliegue
-          ssh -o StrictHostKeyChecking=no -i ec2_key ${EC2_USER}@${SERVER_IP} '
-              # Acceder al directorio del proyecto
-              cd $APP_DIR &&
-              
-              # Verificar si el entorno virtual existe, de lo contrario crearlo
-              if [ -d "venv" ]; then
-                  source venv/bin/activate
-              else
-                  python3 -m venv venv
-                  source venv/bin/activate
-              fi &&
+          ssh -o StrictHostKeyChecking=no -i ec2_key ${EC2_USER}@${SERVER_IP} "
+            set -e  # Asegurarse de que se detenga en caso de error
+            echo 'Conexión exitosa a EC2'
 
-              # Actualizar el código desde la rama main
-              git fetch --all &&
-              git reset --hard origin/main &&
-              git pull origin main &&
+            # Acceder al directorio del proyecto
+            cd $APP_DIR || { echo 'Directorio no encontrado'; exit 1; }
 
-              # Instalar dependencias necesarias
-              pip install -r requirements.txt &&
+            # Verificar si el entorno virtual existe, de lo contrario crearlo
+            if [ -d 'venv' ]; then
+                echo 'Activando entorno virtual existente'
+                source venv/bin/activate
+            else
+                echo 'Creando nuevo entorno virtual'
+                python3 -m venv venv
+                source venv/bin/activate
+            fi
 
-              # Detener cualquier proceso en el puerto 5000
-              lsof -t -i:5000 | xargs kill -9 || true &&
+            # Actualizar el código desde la rama main
+            git fetch --all &&
+            git reset --hard origin/main &&
+            git pull origin main || { echo 'Error en git pull'; exit 1; }
 
-              # Ejecutar la aplicación Flask en segundo plano
-              nohup flask run --host=0.0.0.0 --port=5000 &
+            # Instalar dependencias necesarias
+            pip install -r requirements.txt || { echo 'Error en pip install'; exit 1; }
 
-              # Desactivar el entorno virtual
-              deactivate
-              '
+            # Detener cualquier proceso en el puerto 5000
+            lsof -t -i:5000 | xargs kill -9 || echo 'No se encontraron procesos en el puerto 5000'
+
+            # Ejecutar la aplicación Flask en segundo plano
+            nohup flask run --host=0.0.0.0 --port=5000 &
+
+            # Desactivar el entorno virtual
+            deactivate
+          "
