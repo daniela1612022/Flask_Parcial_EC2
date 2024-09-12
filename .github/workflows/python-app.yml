@@ -46,7 +46,7 @@ jobs:
       # Paso 6: Desplegar a la instancia EC2
       - name: Deploy backend to EC2
         run: |
-          ssh ubuntu@ec2-public-ip << 'EOF'
+          ssh ubuntu@35.171.160.201 << 'EOF'
             cd /home/ubuntu/mi_proyecto_flask  # Ruta del backend en tu instancia EC2
             git pull origin main         # Traer los últimos cambios del repo
             source venv/bin/activate     # Activar el entorno virtual
