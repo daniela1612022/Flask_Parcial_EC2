@@ -1,50 +1,63 @@
-name: CI/CD para Backend Flask
+name: Deploy
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
-  deploy-backend:
+  Deploy:
+    name: Deploy to EC2
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Check out the repository
+      - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.x'
 
-      - name: Install Python dependencies
+      - name: Deploy to EC2 Instance
+        env:
+          EC2_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_IP: ${{ secrets.SSH_HOST }}
+          EC2_USER: ${{ secrets.USER_NAME }}
+          APP_DIR: /home/ubuntu/Flask_S3_AWS
+          APP_FILE: app.py
+          ENVIRONMENT: production
+      
         run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt
+          # Guardar la clave privada en un archivo temporal
+          echo "$EC2_PRIVATE_KEY" > ec2_key && chmod 400 ec2_key
+          
+          # Conectarse a la instancia EC2 y realizar el despliegue
+          ssh -o StrictHostKeyChecking=no -i ec2_key ${EC2_USER}@${SERVER_IP} '
+              # Acceder al directorio del proyecto
+              cd $APP_DIR &&
+              
+              # Activar el entorno virtual
+              if [ -d "env" ]; then
+                  source env/bin/activate
+              else
+                  python3 -m venv env
+                  source env/bin/activate
+              fi &&
 
-      - name: Set up AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1  # Ajusta la región
+              # Actualizar el código desde la rama main
+              git fetch --all &&
+              git reset --hard origin/main &&
+              git pull origin main &&
 
-      - name: Add SSH Key
-        uses: webfactory/ssh-agent@v0.5.3
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+              # Instalar dependencias necesarias
+              pip install -r requirements.txt &&
 
-      # Usar la IP pública de tu instancia EC2 (35.171.160.201)
-      - name: Deploy backend to EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@35.171.160.201 << 'EOF'
-            cd /home/ubuntu/mi_proyecto_flask
-            git pull origin main
-            source venv/bin/activate
-            pip install -r requirements.txt
-            # Inicia el servidor Flask directamente
-            nohup flask run --host=0.0.0.0 &
-          EOF
+              # Detener cualquier proceso que esté usando el puerto 5000 (sin sudo)
+              lsof -t -i:5000 | xargs kill -9 || true &&
+
+              # Ejecutar la aplicación Flask en segundo plano
+              nohup flask run --host=0.0.0.0 --port=5000 &
+
+              # Desactivar el entorno virtual
+              deactivate
+              '
