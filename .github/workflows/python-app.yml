@@ -28,7 +28,7 @@ jobs:
           echo "Clave SSH creada:"
           ls -l ec2_key
 
-      # Paso 4: Probar conexión SSH con valores directos
+      # Paso 4: Probar conexión SSH usando Secrets
       - name: Test SSH Connection
         run: |
-          ssh -v -o StrictHostKeyChecking=no -i ec2_key ubuntu@35.171.160.201 echo "Conexión SSH exitosa"
+          ssh -v -o StrictHostKeyChecking=no -i ec2_key ${{ secrets.USER_NAME }}@${{ secrets.SSH_HOST }} echo "Conexión SSH exitosa"
