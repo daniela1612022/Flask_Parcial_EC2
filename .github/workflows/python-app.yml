@@ -1,4 +1,5 @@
 name: CI/CD para Backend Flask
+
 on:
   push:
     branches:
@@ -29,14 +30,14 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1  # Región de AWS
+          aws-region: us-east-1  # Ajusta la región
 
       - name: Add SSH Key
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Reemplaza con la IP pública de tu instancia EC2 (35.171.160.201)
+      # Usar la IP pública de tu instancia EC2 (35.171.160.201)
       - name: Deploy backend to EC2
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@35.171.160.201 << 'EOF'
@@ -44,5 +45,6 @@ jobs:
             git pull origin main
             source venv/bin/activate
             pip install -r requirements.txt
-            systemctl restart tu-app.service
+            # Inicia el servidor Flask directamente
+            nohup flask run --host=0.0.0.0 &
           EOF
