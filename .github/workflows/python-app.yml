@@ -1,6 +1,5 @@
 name: CI/CD para Backend Flask
 
-# Este flujo de trabajo se ejecuta cuando hay un push a la rama "main"
 on:
   push:
     branches:
@@ -11,45 +10,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Paso 1: Chequear el código del repositorio
       - name: Check out the repository
         uses: actions/checkout@v2
 
-      # Paso 2: Configurar Python
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.x'
 
-      # Paso 3: Instalar dependencias de Python
       - name: Install Python dependencies
         run: |
-          python -m venv venv  # Crear entorno virtual
+          python -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
 
-      # Paso 4: Configurar las credenciales de AWS usando GitHub Secrets
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}  # Solo si usas tokens temporales
-          aws-region: us-west-2  # Cambia por tu región de AWS
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1  # Tu región es us-east-1
 
-      # Paso 5: Añadir clave SSH para conectarse a la instancia EC2
       - name: Add SSH Key
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Paso 6: Desplegar a la instancia EC2
+      # Reemplaza con la IP pública de tu instancia EC2 (35.171.160.201)
       - name: Deploy backend to EC2
         run: |
           ssh ubuntu@35.171.160.201 << 'EOF'
-            cd /home/ubuntu/mi_proyecto_flask  # Ruta del backend en tu instancia EC2
-            git pull origin main         # Traer los últimos cambios del repo
-            source venv/bin/activate     # Activar el entorno virtual
-            pip install -r requirements.txt  # Instalar dependencias
-            systemctl restart tu-app.service  # Reiniciar tu aplicación Flask
+            cd /home/ubuntu/mi_proyecto_flask
+            git pull origin main
+            source venv/bin/activate
+            pip install -r requirements.txt
+            systemctl restart tu-app.service
           EOF
